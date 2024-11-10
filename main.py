@@ -1,336 +1,614 @@
 import sys
 import os
+import subprocess  
+import pickle 
 
-# Añadir la carpeta raíz al PYTHONPATH
+# Añadir la carpeta raíz al PYTHONPATHs
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-import random
 import numpy as np
-from core.utils import load_dataset
+from core.utils import load_dataset, load_multilabel_dataset
 from core.model import (
     train_model,
+    train_multilabel_model,
     save_model,
     load_model,
 )
-from logs.logger import default_logger  # Importación actualizada
+from core.preprocessing import (
+    preprocess_images,
+    preprocess_image_for_classification,
+    preprocess_image_for_classification_array
+)
+from logs.logger import default_logger
 import matplotlib.pyplot as plt
 import cv2
-from sklearn.metrics import classification_report, hamming_loss
-from core.preprocessing import preprocess_image_for_classification  # Importación nueva
-from core.preprocessing import preprocess_image  # Función existente para opción 2
+import seaborn as sns
+import pandas as pd
+from sklearn.metrics import (
+    confusion_matrix,
+    classification_report,
+    roc_curve,
+    auc,
+    precision_recall_curve,
+    average_precision_score,
+    hamming_loss,          # Importación añadida
+    jaccard_score
+)
+from sklearn.preprocessing import label_binarize
 
-def predict_figures(model, image_path, shapes, mode='single', threshold=0.5):
+def create_graphs_subdir(subdir_name):
     """
-    Realiza una predicción sobre una imagen utilizando el modelo proporcionado.
-    
-    :param model: Modelo entrenado.
-    :param image_path: Ruta de la imagen a predecir.
-    :param shapes: Lista de nombres de figuras.
-    :param mode: 'single' para una figura específica, 'multi' para múltiples figuras.
-    :param threshold: Umbral para decidir si una figura está presente.
-    :return: Lista de predicciones.
-    """
-    print(f"Realizando predicción para la imagen: {image_path}")
-    if mode == 'single':
-        preprocess_function = preprocess_image_for_classification
-    else:
-        preprocess_function = preprocess_image  # Aunque no se usa en opción 2 ahora
-    
-    features = preprocess_function(image_path)
-    if features is None:
-        print(f"Error: La imagen {image_path} no pudo ser preprocesada.")
-        return None
-    features = features.reshape(1, -1)  # Asegurar la forma correcta
-    
-    # Hacer la predicción con el modelo entrenado
-    prediction = model.predict(features)
-    return [prediction[0]]  # Solo una figura
+    Crea un subdirectorio dentro de 'static/graphs' si no existe.
 
-def visualize_prediction(image_path, prediction, shapes, mode='single', selected_shape=None):
+    Args:
+        subdir_name (str): Nombre del subdirectorio a crear.
+
+    Returns:
+        str: Ruta completa del subdirectorio.
     """
-    Visualiza la imagen con las etiquetas de predicción.
-    
-    :param image_path: Ruta de la imagen.
-    :param prediction: Lista de predicciones.
-    :param shapes: Lista de nombres de figuras.
-    :param mode: 'single' o 'multi'.
-    :param selected_shape: Nombre de la figura seleccionada (solo para 'single').
+    graphs_dir = os.path.join(os.getcwd(), 'static', 'graphs', subdir_name)
+    if not os.path.exists(graphs_dir):
+        os.makedirs(graphs_dir)
+    return graphs_dir
+
+def plot_confusion_matrix_custom(y_true, y_pred, labels, title, save_path):
     """
-    print(f"Visualizando predicción para: {image_path}")
-    # Cargar la imagen original
-    img = cv2.imread(image_path)
-    if img is None:
-        print(f"No se pudo cargar la imagen {image_path} para visualización.")
-        return
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    Genera y guarda una matriz de confusión.
+    """
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(8,6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=labels, yticklabels=labels)
+    plt.xlabel('Predicción')
+    plt.ylabel('Verdadero')
+    plt.title(title)
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    default_logger.info(f"Matriz de confusión guardada en: {save_path}")
+
+def plot_classification_report_custom(y_true, y_pred, labels, title, save_path):
+    """
+    Genera y guarda un reporte de clasificación como un gráfico de barras.
+    """
+    report = classification_report(y_true, y_pred, target_names=labels, output_dict=True, zero_division=0)
+    report_df = pd.DataFrame(report).transpose().drop(['support'], axis=1)
     
-    # Crear etiquetas basadas en la predicción
-    if mode == 'single' and selected_shape:
-        # Solo mostrar la figura seleccionada
-        present = prediction[0]
-        label = f"{selected_shape.capitalize()} {'Detectada' if present else 'NO Detectada'}"
-    elif mode == 'multi':
-        detected = [shape for shape, present in zip(shapes, prediction) if present]
-        label = "Figuras Detectadas: " + ", ".join(detected) if detected else "No se detectaron figuras"
-    else:
-        # Modo por defecto
-        detected = [shape for shape, present in zip(shapes, prediction) if present]
-        label = "Figuras Detectadas: " + ", ".join(detected) if detected else "No se detectaron figuras"
+    plt.figure(figsize=(10,8))
+    report_df.iloc[:-3, :].plot(kind='bar', figsize=(10,8))
+    plt.title(title)
+    plt.ylabel('Score')
+    plt.ylim(0,1)
+    plt.legend(loc='lower right')
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    default_logger.info(f"Reporte de clasificación guardado en: {save_path}")
+
+def plot_multiclass_roc(y_true, y_pred_proba, classes, save_path):
+    """
+    Genera y guarda las curvas ROC para cada clase en un modelo multiclasificación.
+    """
+    # Binarizar las etiquetas
+    y_true_binarized = label_binarize(y_true, classes=range(len(classes)))
+    n_classes = y_true_binarized.shape[1]
     
-    # Agregar el texto en la imagen con ajustes
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(
-        img_rgb, 
-        label, 
-        (10, 30), 
-        font, 
-        0.5,                 # font_scale 
-        (0, 255, 0),         # color
-        1,                   # thickness
-        cv2.LINE_AA
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_true_binarized[:, i], y_pred_proba[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    
+    plt.figure(figsize=(10,8))
+    colors = sns.color_palette("bright", n_classes)
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=2,
+                 label='ROC curve de la clase {0} (AUC = {1:0.2f})'
+                 ''.format(classes[i], roc_auc[i]))
+    
+    plt.plot([0, 1], [0, 1], 'k--', lw=2)
+    plt.xlim([-0.01, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Tasa de Falsos Positivos')
+    plt.ylabel('Tasa de Verdaderos Positivos')
+    plt.title('Curvas ROC para Multiclasificación')
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    default_logger.info(f"Curvas ROC guardadas en: {save_path}")
+
+def plot_multiclass_precision_recall(y_true, y_pred_proba, classes, save_path):
+    """
+    Genera y guarda las curvas de Precisión-Recall para cada clase en un modelo multiclasificación.
+    """
+    # Binarizar las etiquetas
+    y_true_binarized = label_binarize(y_true, classes=range(len(classes)))
+    n_classes = y_true_binarized.shape[1]
+    
+    precision = dict()
+    recall = dict()
+    average_precision = dict()
+    
+    for i in range(n_classes):
+        precision[i], recall[i], _ = precision_recall_curve(y_true_binarized[:, i], y_pred_proba[:, i])
+        average_precision[i] = average_precision_score(y_true_binarized[:, i], y_pred_proba[:, i])
+    
+    plt.figure(figsize=(10,8))
+    colors = sns.color_palette("bright", n_classes)
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(recall[i], precision[i], color=color, lw=2,
+                 label='Precisión-Recall curve de la clase {0} (AP = {1:0.2f})'
+                 ''.format(classes[i], average_precision[i]))
+    
+    plt.xlabel('Recall')
+    plt.ylabel('Precisión')
+    plt.title('Curvas de Precisión-Recall para Multiclasificación')
+    plt.legend(loc="lower left")
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    default_logger.info(f"Curvas Precisión-Recall guardadas en: {save_path}")
+
+def plot_multilabel_confusion_matrix(y_true, y_pred, labels, save_path):
+    """
+    Genera y guarda matrices de confusión para cada clase en un modelo multietiqueta.
+    """
+    # Binarizar las etiquetas
+    y_true_binarized = y_true
+    y_pred_binarized = y_pred
+    
+    n_classes = y_true_binarized.shape[1]
+    
+    for i in range(n_classes):
+        cm = confusion_matrix(y_true_binarized[:, i], y_pred_binarized[:, i])
+        plt.figure(figsize=(4,4))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                    xticklabels=['No', 'Sí'], yticklabels=['No', 'Sí'])
+        plt.xlabel('Predicción')
+        plt.ylabel('Verdadero')
+        plt.title(f"Matriz de Confusión - {labels[i]}")
+        plt.tight_layout()
+        cm_save_path = os.path.join(save_path, f'confusion_matrix_{labels[i]}.png')
+        plt.savefig(cm_save_path)
+        plt.close()
+        default_logger.info(f"Matriz de confusión para '{labels[i]}' guardada en: {cm_save_path}")
+
+def plot_multilabel_roc(y_true, y_pred_proba, classes, save_path):
+    """
+    Genera y guarda las curvas ROC para cada clase en un modelo multietiqueta.
+    """
+    n_classes = y_pred_proba.shape[1]
+    
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_true[:, i], y_pred_proba[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    
+    plt.figure(figsize=(10,8))
+    colors = sns.color_palette("bright", n_classes)
+    for i, color in zip(range(n_classes), colors):
+        plt.plot(fpr[i], tpr[i], color=color, lw=2,
+                 label='ROC curve de la clase {0} (AUC = {1:0.2f})'
+                 ''.format(classes[i], roc_auc[i]))
+    
+    plt.plot([0, 1], [0, 1], 'k--', lw=2)
+    plt.xlim([-0.01, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Tasa de Falsos Positivos')
+    plt.ylabel('Tasa de Verdaderos Positivos')
+    plt.title('Curvas ROC para Multietiquetas')
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    default_logger.info(f"Curvas ROC multietiqueta guardadas en: {save_path}")
+
+def plot_multilabel_precision_recall(y_true, y_pred, classes, save_path):
+    """
+    Genera y guarda las curvas de Precisión-Recall para cada clase en un modelo multietiqueta.
+    """
+
+    y_true_binarized = y_true
+    y_pred_binarized = y_pred
+    
+    precision = dict()
+    recall = dict()
+    average_precision = dict()
+    
+    for i in range(len(classes)):
+        precision[i], recall[i], _ = precision_recall_curve(y_true_binarized[:, i], y_pred_binarized[:, i])
+        average_precision[i] = average_precision_score(y_true_binarized[:, i], y_pred_binarized[:, i])
+    
+    plt.figure(figsize=(10,8))
+    colors = sns.color_palette("bright", len(classes))
+    for i, color in zip(range(len(classes)), colors):
+        plt.plot(recall[i], precision[i], color=color, lw=2,
+                 label='Precisión-Recall curve de la clase {0} (AP = {1:0.2f})'
+                 ''.format(classes[i], average_precision[i]))
+    
+    plt.xlabel('Recall')
+    plt.ylabel('Precisión')
+    plt.title('Curvas de Precisión-Recall para Multietiquetas')
+    plt.legend(loc="lower left")
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    default_logger.info(f"Curvas Precisión-Recall multietiqueta guardadas en: {save_path}")
+
+def display_metrics(metrics, graph_subdir):
+    """
+    Muestra las métricas del modelo entrenado y genera gráficas.
+
+    Args:
+        metrics (dict): Diccionario con las métricas del modelo.
+        graph_subdir (str): Subdirectorio dentro de 'static/graphs' donde se guardarán las gráficas.
+    """
+    print("\nMétricas del Modelo Entrenado:")
+    print("="*80)
+    print(f"Precisión del modelo: {metrics['accuracy'] * 100:.2f}%")
+    print("Matriz de Confusión:")
+    print(metrics['confusion_matrix'])
+    print("\nReporte de Clasificación:")
+    print(metrics['classification_report'])
+    print("-"*80)
+    
+    graphs_dir = create_graphs_subdir(graph_subdir)
+    
+    # Generar y guardar la matriz de confusión
+    cm_title = "Matriz de Confusión - Modelo de Multiclasificación"
+    cm_save_path = os.path.join(graphs_dir, 'confusion_matrix_multiclass.png')
+    plot_confusion_matrix_custom(
+        y_true=metrics['y_test'],
+        y_pred=metrics['y_pred'],
+        labels=['circle', 'square', 'triangle', 'star'],
+        title=cm_title,
+        save_path=cm_save_path
     )
     
-    # Mostrar la imagen
-    plt.figure(figsize=(8,6))
-    plt.imshow(img_rgb)
-    plt.title("Resultado de la Predicción")
-    plt.axis('off')
-    plt.show()
+    # Generar y guardar el reporte de clasificación
+    cr_title = "Reporte de Clasificación - Modelo de Multiclasificación"
+    cr_save_path = os.path.join(graphs_dir, 'classification_report_multiclass.png')
+    plot_classification_report_custom(
+        y_true=metrics['y_test'],
+        y_pred=metrics['y_pred'],
+        labels=['circle', 'square', 'triangle', 'star'],
+        title=cr_title,
+        save_path=cr_save_path
+    )
+    
+    # Generar y guardar las curvas ROC
+    if hasattr(metrics['model'], 'predict_proba'):
+        y_pred_proba = metrics['model'].predict_proba(metrics['X_test'])
+        roc_save_path = os.path.join(graphs_dir, 'roc_multiclass.png')
+        plot_multiclass_roc(
+            y_true=metrics['y_test'],
+            y_pred_proba=y_pred_proba,
+            classes=['circle', 'square', 'triangle', 'star'],
+            save_path=roc_save_path
+        )
+    
+        # Generar y guardar las curvas Precision-Recall
+        pr_save_path = os.path.join(graphs_dir, 'precision_recall_multiclass.png')
+        plot_multiclass_precision_recall(
+            y_true=metrics['y_test'],
+            y_pred_proba=y_pred_proba,
+            classes=['circle', 'square', 'triangle', 'star'],
+            save_path=pr_save_path
+        )
 
-def detect_and_annotate_shapes(image_path, annotated_dir, shapes):
+def display_metrics_multilabel(model, y_test, y_pred, X_test, label_names, graph_subdir):
     """
-    Detecta y anota las figuras en una imagen combinada utilizando OpenCV.
-    
-    :param image_path: Ruta de la imagen combinada.
-    :param annotated_dir: Directorio donde se guardarán las imágenes anotadas.
-    :param shapes: Lista de nombres de figuras para la clasificación.
-    :return: Lista de figuras detectadas.
-    """
-    print(f"Procesando detección y anotación para: {image_path}")
-    # Cargar la imagen
-    image = cv2.imread(image_path)
-    if image is None:
-        print(f"Error: No se pudo cargar la imagen {image_path}.")
-        return []
-    
-    # Convertir a escala de grises
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
-    # Aplicar umbralización inversa para binarizar la imagen
-    _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)
-    
-    # Encontrar contornos
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    shapes_detected = []
-    
-    for cnt in contours:
-        # Aproximar el contorno para simplificar la forma
-        peri = cv2.arcLength(cnt, True)
-        approx = cv2.approxPolyDP(cnt, 0.04 * peri, True)
-        
-        # Calcular el área para filtrar pequeños contornos
-        area = cv2.contourArea(cnt)
-        if area < 100:  # Ajusta este umbral según tus necesidades
-            continue
-        
-        # Identificar la forma
-        shape_type = "Unidentified"
-        if len(approx) == 3:
-            shape_type = "triangle"
-        elif len(approx) == 4:
-            # Verificar si es un cuadrado o rectángulo
-            (x, y, w, h) = cv2.boundingRect(approx)
-            ar = w / float(h)
-            shape_type = "square" if 0.95 <= ar <= 1.05 else "rectangle"
-        elif len(approx) > 4:
-            # Verificar si es un círculo
-            (x, y), radius = cv2.minEnclosingCircle(cnt)
-            circle_area = np.pi * (radius ** 2)
-            if abs(circle_area - area) / area < 0.2:
-                shape_type = "circle"
-            else:
-                shape_type = "star"  # Suponiendo que las estrellas tienen más lados
-        
-        if shape_type != "Unidentified" and shape_type in shapes:
-            shapes_detected.append(shape_type)
-            # Dibujar el contorno con un color específico
-            color = get_shape_color(shape_type)
-            cv2.drawContours(image, [cnt], -1, color, 2)
-            
-            # Calcular el centro para poner la etiqueta
-            M = cv2.moments(cnt)
-            if M["m00"] != 0:
-                cX = int(M["m10"] / M["m00"])
-                cY = int(M["m01"] / M["m00"])
-            else:
-                cX, cY = 0, 0
-            
-            # Poner la etiqueta
-            cv2.putText(image, shape_type, (cX - 30, cY),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-    
-    # Crear el directorio de anotaciones si no existe
-    if not os.path.exists(annotated_dir):
-        os.makedirs(annotated_dir)
-    
-    # Guardar la imagen anotada
-    annotated_image_path = os.path.join(annotated_dir, os.path.basename(image_path))
-    cv2.imwrite(annotated_image_path, image)
-    print(f"Imagen anotada guardada en: {annotated_image_path}")
-    
-    # Mostrar la imagen anotada
-    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    plt.figure(figsize=(8,6))
-    plt.imshow(img_rgb)
-    plt.title(f"Detección de Figuras en {os.path.basename(image_path)}")
-    plt.axis('off')
-    plt.show()
-    
-    return shapes_detected
+    Muestra las métricas del modelo multietiqueta y genera gráficas.
 
-def get_shape_color(shape):
+    Args:
+        model: Modelo multietiqueta entrenado.
+        y_test (ndarray): Etiquetas verdaderas.
+        y_pred (ndarray): Etiquetas predichas.
+        X_test (ndarray): Características de prueba.
+        label_names (list): Lista de nombres de etiquetas.
+        graph_subdir (str): Subdirectorio dentro de 'static/graphs' donde se guardarán las gráficas.
     """
-    Asigna un color específico a cada tipo de figura.
+    print("\nMétricas del Modelo Multietiqueta:")
+    print("="*80)
+    print("Reporte de Clasificación:")
+    print(classification_report(y_test, y_pred, target_names=label_names, zero_division=0))
+    print(f"Hamming Loss: {hamming_loss(y_test, y_pred):.4f}")
+    print(f"Jaccard Score (macro): {jaccard_score(y_test, y_pred, average='macro'):.4f}")
+    print("-"*80)
     
-    :param shape: Tipo de figura.
-    :return: Tupla de color BGR.
-    """
-    colors = {
-        "circle": (0, 255, 0),      # Verde
-        "square": (255, 0, 0),      # Azul
-        "triangle": (0, 0, 255),    # Rojo
-        "star": (255, 165, 0),      # Naranja
-        "rectangle": (128, 0, 128)  # Morado
-    }
-    return colors.get(shape, (0, 0, 0))  # Negro por defecto
+    # Crear directorio para gráficas específicas
+    graphs_dir = create_graphs_subdir(graph_subdir)
+    
+    # Generar y guardar el reporte de clasificación multietiqueta
+    cr_title = "Reporte de Clasificación - Modelo Multietiqueta"
+    cr_save_path = os.path.join(graphs_dir, 'classification_report_multilabel.png')
+    plot_classification_report_custom(
+        y_true=y_test,
+        y_pred=y_pred,
+        labels=label_names,
+        title=cr_title,
+        save_path=cr_save_path
+    )
+    
+    # Generar y guardar las curvas Precision-Recall
+    pr_save_path = os.path.join(graphs_dir, 'precision_recall_multilabel.png')
+    plot_multilabel_precision_recall(
+        y_true=y_test,
+        y_pred=y_pred,
+        classes=label_names,
+        save_path=pr_save_path
+    )
+    
+    # Generar y guardar las matrices de confusión multietiqueta
+    plot_multilabel_confusion_matrix(
+        y_true=y_test,
+        y_pred=y_pred,
+        labels=label_names,
+        save_path=graphs_dir
+    )
+    
+    # Generar y guardar las curvas ROC multietiqueta si el modelo las soporta
+    if hasattr(model, 'predict_proba'):
+        y_pred_proba = model.predict_proba(X_test)
+        roc_save_path = os.path.join(graphs_dir, 'roc_multilabel.png')
+        plot_multilabel_roc(
+            y_true=y_test,
+            y_pred_proba=y_pred_proba,
+            classes=label_names,
+            save_path=roc_save_path
+        )
 
 def main():
-    shapes = ['circle', 'square', 'triangle', 'star']
-    base_path = os.path.join(os.getcwd(), 'static', 'shapes')
-    mixed_dir = os.path.join(base_path, 'mixed')
-    annotated_dir = os.path.join(base_path, 'annotated')  # Directorio para imágenes anotadas
+    # Definir las figuras disponibles y su mapeo de etiquetas
+    label_names = ['circle', 'square', 'triangle', 'star']
+    label_mapping = {name: idx for idx, name in enumerate(label_names)}
+
+    # Directorios
+    shapes_dir = os.path.join(os.getcwd(), 'static', 'shapes')
+    preprocessing_dir = os.path.join(os.getcwd(), 'static', 'preprocessing_shapes')
+    combined_images_dir = os.path.join(shapes_dir, 'combined')
+    labels_file = os.path.join(combined_images_dir, 'labels.csv')
     
-    # Crear carpetas si no existen
-    if not os.path.exists(mixed_dir):
-        os.makedirs(mixed_dir)
-    if not os.path.exists(annotated_dir):
-        os.makedirs(annotated_dir)
+    class_dir = os.path.join(os.getcwd(), 'static', 'class')
+    multilabel_dir = os.path.join(os.getcwd(), 'static', 'multilabel')
     
-    # Solicitar al usuario que seleccione una opción
-    print("Selecciona una opción para detectar figuras:")
-    print("1. Detectar una figura específica (circle, square, triangle, star)")
-    print("2. Detectar múltiples figuras en imágenes combinadas (mixed)")
-    choice = input("Ingresa 1 o 2: ").strip()
-    
-    if choice == '1':
-        # Modo de detección de una figura específica
-        print("\nOpciones de figuras:")
-        for idx, shape in enumerate(shapes, start=1):
-            print(f"{idx}. {shape}")
-        figure_choice = input("Selecciona una figura para detectar (circle, square, triangle, star): ").strip().lower()
-        
-        if figure_choice not in shapes:
-            default_logger.error("Figura no válida seleccionada.")
-            print("Figura no válida seleccionada.")
+    annotated_dir = os.path.join(os.getcwd(), 'static', 'annotated')
+
+    os.makedirs(preprocessing_dir, exist_ok=True)
+    os.makedirs(combined_images_dir, exist_ok=True)
+    os.makedirs(class_dir, exist_ok=True)          
+    os.makedirs(multilabel_dir, exist_ok=True)     
+    os.makedirs(annotated_dir, exist_ok=True)
+    os.makedirs(os.path.join('static', 'graphs', 'class'), exist_ok=True) 
+    os.makedirs(os.path.join('static', 'graphs', 'multilabel'), exist_ok=True)
+
+    # Menú de opciones
+    print("Selecciona una opción para el flujo de trabajo:")
+    print("P. Preprocesar imágenes y generar dataset")
+    print("A. Entrenar modelo de multiclasificación")
+    print("B. Entrenar modelo multietiqueta")
+    print("1. Clasificar imágenes con una sola figura")
+    print("2. Detectar y clasificar múltiples figuras en imágenes")
+    choice = input("Ingresa P, A, B, 1 o 2: ").strip().upper()
+
+    if choice == 'P':
+        # Preprocesar imágenes y generar dataset
+        preprocess_images(shapes_dir, preprocessing_dir, test_ratio=0.1)
+
+        try:
+            subprocess.run([sys.executable, '-m', 'core.combine_images'], check=True)
+            print("combine_images.py se ejecutó correctamente.")
+            default_logger.info("combine_images.py se ejecutó correctamente.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error al ejecutar combine_images.py: {e}")
+            default_logger.error(f"Error al ejecutar combine_images.py: {e}")
+
+    elif choice == 'A':
+        # Entrenar modelo de multiclasificación
+        X_train, y_train, X_test, y_test = load_dataset(preprocessing_dir)
+
+        if X_train.size == 0 or X_test.size == 0:
+            print("No hay suficientes datos para entrenar o evaluar el modelo.")
             return
-        
-        # Entrenar el modelo para la figura seleccionada
-        figure_folder = os.path.join(base_path, figure_choice)
-        non_figure_folders = [os.path.join(base_path, shape) for shape in shapes if shape != figure_choice]
-        
-        default_logger.info(f"\nProcesando figura: {figure_choice}")
-        print(f"\nProcesando figura: {figure_choice}")
-        
-        # Verificar si las carpetas existen
-        if not os.path.isdir(figure_folder):
-            default_logger.error(f"Carpeta para la figura '{figure_choice}' no encontrada en {figure_folder}.")
-            print(f"Carpeta para la figura '{figure_choice}' no encontrada en {figure_folder}.")
-            return
-        for folder in non_figure_folders:
-            if not os.path.isdir(folder):
-                default_logger.error(f"Carpeta '{folder}' no encontrada. Asegúrate de que todas las carpetas existen.")
-                print(f"Carpeta '{folder}' no encontrada. Asegúrate de que todas las carpetas existen.")
-                return
-        
-        # Cargar el dataset usando la función original de preprocesamiento
-        X, y = load_dataset(figure_folder, non_figure_folders, num_non_figure=1500)
-        default_logger.info(f"Cantidad de imágenes con figura '{figure_choice}': {sum(y)}")
-        default_logger.info(f"Cantidad de imágenes sin figura '{figure_choice}': {len(y) - sum(y)}")
-        print(f"Cantidad de imágenes con figura '{figure_choice}': {sum(y)}")
-        print(f"Cantidad de imágenes sin figura '{figure_choice}': {len(y) - sum(y)}")
-        
+
         # Entrenar el modelo
-        print("Entrenando el modelo de Regresión Logística...")
-        model = train_model(X, y)
-        print("Modelo entrenado exitosamente.")
+        model, metrics = train_model(X_train, y_train, X_test, y_test)
         
-        # Guardar el modelo
-        save_model(model, figure_choice)
-        print(f"Modelo guardado como '{figure_choice}_model.pkl'")
+        # Añadir información adicional al diccionario de métricas
+        metrics['y_test'] = y_test
+        metrics['y_pred'] = model.predict(X_test)
+        metrics['model'] = model
+        metrics['X_test'] = X_test
         
-        # Realizar predicciones en nuevas imágenes
-        # Seleccionar imágenes aleatorias de todas las carpetas de figuras
-        all_folders = [os.path.join(base_path, shape) for shape in shapes]
-        
-        print(f"Todas las carpetas de figuras para la predicción: {all_folders}")
-        default_logger.info(f"Todas las carpetas de figuras para la predicción: {all_folders}")
-        
-        default_logger.info("\nRealizando predicciones en nuevas imágenes...")
-        print("\nRealizando predicciones en nuevas imágenes...")
-        
-        for i in range(10):
-            # Seleccionar una carpeta aleatoria de todas las carpetas de figuras
-            folder = random.choice(all_folders)
-            image_files = [img for img in os.listdir(folder) if img.lower().endswith(('.png', '.jpg', '.jpeg'))]
-            if not image_files:
-                default_logger.warning(f"La carpeta {folder} está vacía.")
-                print(f"La carpeta {folder} está vacía.")
-                continue
-            image_name = random.choice(image_files)
-            image_path = os.path.join(folder, image_name)
-            prediction = predict_figures(model, image_path, [figure_choice], mode='single', threshold=0.5)
-            if prediction is None:
-                default_logger.error(f"Imagen {image_name} en carpeta {folder}: Error al cargar la imagen.")
-                print(f"Imagen {image_name} en carpeta {folder}: Error al cargar la imagen.")
-            else:
-                present = prediction[0]
-                if present:
-                    default_logger.info(f"Imagen {image_name} en carpeta {folder}: {figure_choice} detectada")
-                    print(f"Imagen {image_name} en carpeta {folder}: {figure_choice} detectada")
-                else:
-                    default_logger.info(f"Imagen {image_name} en carpeta {folder}: {figure_choice} NO detectada")
-                    print(f"Imagen {image_name} en carpeta {folder}: {figure_choice} NO detectada")
-            
-                # Visualizar la predicción
-                visualize_prediction(image_path, prediction, [figure_choice], mode='single', selected_shape=figure_choice)
-    
-    elif choice == '2':
-        # Opción 2: Detección de múltiples figuras en imágenes combinadas (mixed) utilizando OpenCV
-        print("\nIniciando detección y anotación de múltiples figuras en imágenes combinadas...\n")
-        
-        # Ruta para guardar imágenes anotadas
-        annotated_dir = os.path.join(base_path, 'annotated')
-        if not os.path.exists(annotated_dir):
-            os.makedirs(annotated_dir)
-        
-        # Obtener todas las imágenes combinadas
-        image_files = [img for img in os.listdir(mixed_dir) if img.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        
-        if not image_files:
-            default_logger.warning(f"La carpeta {mixed_dir} está vacía.")
-            print(f"La carpeta {mixed_dir} está vacía.")
+        save_model(model, model_name='model.pkl')
+        display_metrics(metrics, graph_subdir='class')  # Guardar en 'graphs/class'
+
+    elif choice == 'B':
+        # Opción B: Entrenar modelo multietiqueta
+        print("\nEntrenando modelo multietiqueta...")
+        default_logger.info("Entrenando modelo multietiqueta...")
+
+        # Asegúrate de que los directorios son correctos
+        combined_images_dir = os.path.join(shapes_dir, 'combined')
+        labels_file = os.path.join(combined_images_dir, 'labels.csv')
+
+        # Cargar el dataset multietiqueta
+        X_train, y_train, X_test, y_test = load_multilabel_dataset(combined_images_dir, labels_file)
+
+        if X_train.size == 0 or X_test.size == 0:
+            print("No hay suficientes datos para entrenar o evaluar el modelo.")
             return
-        
+
+        # Entrenar el modelo multietiqueta
+        model = train_multilabel_model(X_train, y_train)
+        save_model(model, model_name='multilabel_model.pkl')
+
+        # Evaluar el modelo
+        y_pred = model.predict(X_test)
+        display_metrics_multilabel(model, y_test, y_pred, X_test, label_names, graph_subdir='multilabel')  # Guardar en 'graphs/multilabel'
+
+    elif choice == '1':
+        # Clasificar imágenes con una sola figura
+        model = load_model(model_name='model.pkl')
+        if not model:
+            print("No se encontró un modelo entrenado. Por favor, entrena el modelo primero (Opción A).")
+            return
+
+        image_files = [img for img in os.listdir(class_dir) if img.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+        if not image_files:
+            print(f"No se encontraron imágenes en {class_dir} para la predicción.")
+            return
+
+        annotated_images = []
+
         for image_name in image_files:
-            image_path = os.path.join(mixed_dir, image_name)
-            shapes_detected = detect_and_annotate_shapes(image_path, annotated_dir, shapes)
-            print(f"Figuras detectadas en {image_name}: {', '.join(shapes_detected) if shapes_detected else 'Ninguna'}\n")
-        
-        print("Proceso de detección y anotación completado.")
-    
+            image_path = os.path.join(class_dir, image_name)
+            features = preprocess_image_for_classification(image_path)
+            if features is None:
+                continue
+
+            features = features.reshape(1, -1)
+            prediction = model.predict(features)[0]
+            shape_name = label_names[prediction]
+
+            print(f"Imagen: {image_name} - Figura Detectada: {shape_name}")
+            default_logger.info(f"Imagen: {image_name} - Figura Detectada: {shape_name}")
+
+            # Anotar la imagen
+            img = cv2.imread(image_path)
+            if img is not None:
+                label_text = f"Figura: {shape_name}"
+                
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.5
+                thickness = 1
+                text_size, _ = cv2.getTextSize(label_text, font, font_scale, thickness)
+                text_x = 10
+                text_y = 20
+                overlay = img.copy()
+                cv2.rectangle(overlay, (text_x - 5, text_y - text_size[1] - 5), 
+                              (text_x + text_size[0] + 5, text_y + 5), 
+                              (0, 0, 0), -1)
+                alpha = 0.6
+                img = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
+                cv2.putText(img, label_text, (text_x, text_y),
+                            font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+                
+                annotated_image_path = os.path.join(annotated_dir, f"annotated_{image_name}")
+                cv2.imwrite(annotated_image_path, img)
+                print(f"Imagen anotada guardada en: {annotated_image_path}")
+
+                annotated_images.append((img, image_name, shape_name))
+
+        # Visualizar las imágenes anotadas en una figura
+        if annotated_images:
+            num_images = len(annotated_images)
+            cols = 3
+            rows = num_images // cols + int(num_images % cols > 0)
+            plt.figure(figsize=(15, 5 * rows))
+            for idx, (img, image_name, shape_detected) in enumerate(annotated_images):
+                plt.subplot(rows, cols, idx + 1)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                plt.imshow(img_rgb)
+                plt.axis('off')
+                plt.title(f"{image_name}\nFigura: {shape_detected}", fontsize=10)
+            plt.suptitle('Imágenes Anotadas - Clasificación de una Sola Figura', fontsize=16)
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+            annotated_plot_path = os.path.join('static', 'graphs', 'class', 'annotated_images_plot_option1.png')
+            plt.savefig(annotated_plot_path)
+            plt.close()
+            default_logger.info(f"Figura de imágenes anotadas guardada en: {annotated_plot_path}")
+            print(f"Figura de imágenes anotadas guardada en: {annotated_plot_path}")
+
+    elif choice == '2':
+        # Detectar y clasificar múltiples figuras en imágenes (usando modelo multietiqueta)
+        model = load_model(model_name='multilabel_model.pkl')
+        if not model:
+            print("No se encontró un modelo multietiqueta entrenado. Por favor, entrena el modelo primero (Opción B).")
+            return
+
+        image_files = [img for img in os.listdir(multilabel_dir) if img.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+        if not image_files:
+            print(f"No se encontraron imágenes en {multilabel_dir} para la predicción.")
+            return
+
+        annotated_images = []
+
+        for image_name in image_files:
+            image_path = os.path.join(multilabel_dir, image_name)
+            features = preprocess_image_for_classification(image_path)
+            if features is None:
+                continue
+
+            features = features.reshape(1, -1)
+            prediction = model.predict(features)[0]
+
+            if isinstance(prediction, (list, np.ndarray)):
+                prediction = np.array(prediction)
+            else:
+                prediction = np.array([prediction])
+            predicted_labels = [label_names[i] for i, val in enumerate(prediction) if val == 1]
+
+            print(f"Imagen: {image_name} - Figuras Detectadas: {', '.join(predicted_labels)}")
+            default_logger.info(f"Imagen: {image_name} - Figuras Detectadas: {', '.join(predicted_labels)}")
+
+            # Anotar la imagen
+            img = cv2.imread(image_path)
+            if img is not None:
+                label_text = "Figuras: " + ", ".join(predicted_labels)
+                
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.5 
+                thickness = 1  
+                text_size, _ = cv2.getTextSize(label_text, font, font_scale, thickness)
+                text_x = 10
+                text_y = 20  
+
+                overlay = img.copy()
+                cv2.rectangle(overlay, (text_x - 5, text_y - text_size[1] - 5), 
+                              (text_x + text_size[0] + 5, text_y + 5), 
+                              (0, 0, 0), -1)
+                alpha = 0.6  
+                img = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
+                # Escribir el texto
+                cv2.putText(img, label_text, (text_x, text_y),
+                            font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+                
+                annotated_image_path = os.path.join(annotated_dir, f"annotated_{image_name}")
+                cv2.imwrite(annotated_image_path, img)
+                print(f"Imagen anotada guardada en: {annotated_image_path}")
+
+                annotated_images.append((img, image_name, predicted_labels))
+
+        # Visualizar las imágenes anotadas en una figura
+        if annotated_images:
+            num_images = len(annotated_images)
+            cols = 3
+            rows = num_images // cols + int(num_images % cols > 0)
+            plt.figure(figsize=(15, 5 * rows))
+            for idx, (img, image_name, labels_detected) in enumerate(annotated_images):
+                plt.subplot(rows, cols, idx + 1)
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                plt.imshow(img_rgb)
+                plt.axis('off')
+                plt.title(f"{image_name}\nFiguras: {', '.join(labels_detected)}", fontsize=10)
+            plt.suptitle('Imágenes Anotadas - Detección y Clasificación de Múltiples Figuras', fontsize=16)
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+            annotated_plot_path = os.path.join('static', 'graphs', 'multilabel', 'annotated_images_plot_option2.png')
+            plt.savefig(annotated_plot_path)
+            plt.close()
+            default_logger.info(f"Figura de imágenes anotadas guardada en: {annotated_plot_path}")
+            print(f"Figura de imágenes anotadas guardada en: {annotated_plot_path}")
+
     else:
-        default_logger.error("Opción no válida seleccionada.")
         print("Opción no válida seleccionada.")
         return
 

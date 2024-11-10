@@ -1,73 +1,62 @@
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-import pickle
 import os
+import joblib
+from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
 from logs.logger import default_logger
+from sklearn.metrics import classification_report, confusion_matrix
 
-def train_model(X, y):
+def train_model(X_train, y_train, X_test, y_test):
     """
-    Entrena un modelo de regresión logística y retorna el modelo entrenado.
-    
-    :param X: Características de entrenamiento.
-    :param y: Etiquetas de entrenamiento.
-    :return: Modelo entrenado.
+    Entrena un modelo de Regresión Logística para multiclasificación.
     """
-    # Dividimos los datos en entrenamiento y prueba
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X_train, y_train)
+    default_logger.info("Modelo de multiclasificación entrenado exitosamente.")
 
-    # Creamos el modelo de regresión logística con balanceo de clases
-    model = LogisticRegression(max_iter=1000, class_weight='balanced')
-    model.fit(X_train, y_train)  # Entrenamos el modelo
-
-    # Hacemos predicciones sobre el conjunto de prueba
+    # Evaluar el modelo
     y_pred = model.predict(X_test)
+    accuracy = model.score(X_test, y_test)
+    cm = confusion_matrix(y_test, y_pred)
+    report = classification_report(y_test, y_pred)
 
-    # Calculamos la precisión del modelo
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f"Precisión del modelo: {accuracy * 100:.2f}%")
-    print("Matriz de Confusión:")
-    print(confusion_matrix(y_test, y_pred))
-    print("\nReporte de Clasificación:")
-    print(classification_report(y_test, y_pred))
+    metrics = {
+        'accuracy': accuracy,
+        'confusion_matrix': cm,
+        'classification_report': report
+    }
 
-    # Logs
-    default_logger.info(f"Precisión del modelo: {accuracy * 100:.2f}%")
-    default_logger.info(f"Matriz de Confusión:\n{confusion_matrix(y_test, y_pred)}")
-    default_logger.info(f"Reporte de Clasificación:\n{classification_report(y_test, y_pred)}")
+    return model, metrics
+
+def train_multilabel_model(X_train, y_train):
+    """
+    Entrena un modelo de Regresión Logística para clasificación multietiqueta.
+    """
+    model = OneVsRestClassifier(LogisticRegression(max_iter=1000))
+    model.fit(X_train, y_train)
+    default_logger.info("Modelo multietiqueta entrenado exitosamente.")
 
     return model
 
-def save_model(model, figure):
+def save_model(model, model_name='model.pkl'):
     """
-    Guarda el modelo entrenado en la carpeta 'models'.
-    
-    :param model: Modelo entrenado.
-    :param figure: Nombre de la figura.
+    Guarda el modelo entrenado.
     """
     models_dir = os.path.join(os.getcwd(), 'models')
-    os.makedirs(models_dir, exist_ok=True)
-    model_filename = os.path.join(models_dir, f'{figure}_model.pkl')
-    with open(model_filename, 'wb') as file:
-        pickle.dump(model, file)
-    default_logger.info(f"Modelo para '{figure}' guardado como {model_filename}")
-    print(f"Modelo para '{figure}' guardado como {model_filename}")
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+    model_path = os.path.join(models_dir, model_name)
+    joblib.dump(model, model_path)
+    default_logger.info(f"Modelo guardado en: {model_path}")
 
-def load_model(figure):
+def load_model(model_name='model.pkl'):
     """
-    Carga un modelo entrenado desde la carpeta 'models'.
-    
-    :param figure: Nombre de la figura.
-    :return: Modelo cargado o None si no se encuentra.
+    Carga el modelo entrenado.
     """
-    model_filename = os.path.join(os.getcwd(), 'models', f'{figure}_model.pkl')
-    if os.path.exists(model_filename):
-        with open(model_filename, 'rb') as file:
-            model = pickle.load(file)
-        default_logger.info(f"Modelo para '{figure}' cargado desde {model_filename}")
-        print(f"Modelo para '{figure}' cargado desde {model_filename}")
+    model_path = os.path.join(os.getcwd(), 'models', model_name)
+    if os.path.exists(model_path):
+        model = joblib.load(model_path)
+        default_logger.info(f"Modelo cargado desde: {model_path}")
         return model
     else:
-        default_logger.warning(f"No se encontró el modelo para '{figure}' en {model_filename}")
-        print(f"No se encontró el modelo para '{figure}' en {model_filename}")
+        default_logger.error(f"No se encontró el modelo en {model_path}")
         return None

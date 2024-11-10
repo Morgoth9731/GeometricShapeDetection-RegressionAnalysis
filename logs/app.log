@@ -1,34 +1,137 @@
-2024-10-21 21:57:00,827 - default - INFO - 
-Procesando figura: star
-2024-10-21 21:57:00,828 - default - INFO - Cargando imágenes positivas de: /Users/chris/Documents/FPA/static/shapes/star
-2024-10-21 21:57:06,554 - default - INFO - Cargando 1500 imágenes negativas de múltiples carpetas.
-2024-10-21 21:57:14,592 - default - INFO - Cantidad de imágenes con figura 'star': 3765
-2024-10-21 21:57:14,593 - default - INFO - Cantidad de imágenes sin figura 'star': 1500
-2024-10-21 21:57:21,035 - default - INFO - Precisión del modelo: 99.91%
-2024-10-21 21:57:21,038 - default - INFO - Matriz de Confusión:
-[[305   1]
- [  0 747]]
-2024-10-21 21:57:21,048 - default - INFO - Reporte de Clasificación:
-              precision    recall  f1-score   support
-
-           0       1.00      1.00      1.00       306
-           1       1.00      1.00      1.00       747
-
-    accuracy                           1.00      1053
-   macro avg       1.00      1.00      1.00      1053
-weighted avg       1.00      1.00      1.00      1053
-
-2024-10-21 21:57:21,056 - default - INFO - Modelo para 'star' guardado como /Users/chris/Documents/FPA/models/star_model.pkl
-2024-10-21 21:57:21,056 - default - INFO - Todas las carpetas de figuras para la predicción: ['/Users/chris/Documents/FPA/static/shapes/circle', '/Users/chris/Documents/FPA/static/shapes/square', '/Users/chris/Documents/FPA/static/shapes/triangle', '/Users/chris/Documents/FPA/static/shapes/star']
-2024-10-21 21:57:21,056 - default - INFO - 
-Realizando predicciones en nuevas imágenes...
-2024-10-21 21:57:21,064 - default - INFO - Imagen 2511.png en carpeta /Users/chris/Documents/FPA/static/shapes/square: star NO detectada
-2024-10-21 21:57:24,012 - default - INFO - Imagen 2510.png en carpeta /Users/chris/Documents/FPA/static/shapes/square: star NO detectada
-2024-10-21 21:57:24,978 - default - INFO - Imagen 1823.png en carpeta /Users/chris/Documents/FPA/static/shapes/triangle: star NO detectada
-2024-10-21 21:57:25,645 - default - INFO - Imagen 716.png en carpeta /Users/chris/Documents/FPA/static/shapes/circle: star NO detectada
-2024-10-21 21:57:26,436 - default - INFO - Imagen 3349.png en carpeta /Users/chris/Documents/FPA/static/shapes/triangle: star NO detectada
-2024-10-21 21:57:27,097 - default - INFO - Imagen 2191.png en carpeta /Users/chris/Documents/FPA/static/shapes/triangle: star NO detectada
-2024-10-21 21:57:27,780 - default - INFO - Imagen 3752.png en carpeta /Users/chris/Documents/FPA/static/shapes/star: star detectada
-2024-10-21 21:57:31,969 - default - INFO - Imagen 2107.png en carpeta /Users/chris/Documents/FPA/static/shapes/square: star NO detectada
-2024-10-21 21:57:32,675 - default - INFO - Imagen 3675.png en carpeta /Users/chris/Documents/FPA/static/shapes/star: star detectada
-2024-10-21 21:57:33,540 - default - INFO - Imagen 2700.png en carpeta /Users/chris/Documents/FPA/static/shapes/triangle: star NO detectada
+2024-11-09 19:47:45,854 - default - INFO - Cargadas 13392 imágenes para la figura: circle
+2024-11-09 19:47:52,006 - default - INFO - Cargadas 13554 imágenes para la figura: square
+2024-11-09 19:47:57,594 - default - INFO - Cargadas 13392 imágenes para la figura: triangle
+2024-11-09 19:48:03,713 - default - INFO - Cargadas 13554 imágenes para la figura: star
+2024-11-09 19:48:03,774 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:03,839 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:03,852 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:03,898 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:03,911 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:03,953 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:03,975 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:03,988 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,001 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:04,036 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,104 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:04,195 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,215 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,260 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,304 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,327 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:04,423 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,525 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,596 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:04,617 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:04,675 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:04,848 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:04,922 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:04,960 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:04,990 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:05,014 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,026 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:05,051 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:05,084 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:05,100 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,245 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:05,319 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:05,332 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,444 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,474 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,632 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,691 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:05,707 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,768 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:05,856 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:05,907 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,941 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:05,975 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:06,075 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:06,101 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:06,132 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:06,190 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:06,203 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:06,292 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:06,317 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:06,348 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:06,363 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:06,402 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:06,493 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:06,552 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:06,751 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:06,764 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:06,841 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:06,880 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:06,968 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,012 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,129 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:07,163 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,240 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,261 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,291 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:07,322 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:07,409 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,430 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:07,449 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:07,500 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:07,536 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,589 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,619 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:07,633 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:07,709 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:07,835 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:07,847 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:07,955 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,001 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,037 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,054 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,122 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:08,188 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:08,264 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,318 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,391 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:08,448 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,528 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,615 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,635 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:08,657 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:08,688 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,720 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:08,831 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:08,850 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:08,879 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:08,947 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:09,002 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:09,063 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:09,142 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:09,207 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:09,231 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:09,320 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:09,391 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:09,411 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:09,435 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:09,497 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:09,513 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:09,565 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:09,697 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:09,736 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:09,867 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:09,920 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:09,952 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:09,984 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:10,002 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:10,020 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:10,087 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:10,101 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:10,154 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:10,192 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:10,230 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:10,276 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:10,383 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:10,561 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
+2024-11-09 19:48:10,577 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:10,593 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:10,607 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:10,641 - default - WARNING - No se pudo colocar la figura circle sin superposición después de 50 intentos.
+2024-11-09 19:48:10,657 - default - WARNING - No se pudo colocar la figura square sin superposición después de 50 intentos.
+2024-11-09 19:48:10,836 - default - WARNING - No se pudo colocar la figura star sin superposición después de 50 intentos.
+2024-11-09 19:48:10,850 - default - WARNING - No se pudo colocar la figura triangle sin superposición después de 50 intentos.
